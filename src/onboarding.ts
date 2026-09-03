@@ -312,8 +312,8 @@ export async function runOnboarding(
     status: 'done',
     message: {
       type: 'interactive_buttons',
-      header: 'Welcome to BMONI',
-      text: `✅ *Welcome to BMONI, ${firstName}!*\n\nYour stablecoin wallet is ready.\n\n• *Smart Wallet:* \`${walletAddress.slice(0, 10)}...${walletAddress.slice(-6)}\``,
+      header: 'Welcome to ChatMonie',
+      text: `✅ *Welcome to ChatMonie, ${firstName}!*\n\nYour stablecoin wallet is ready.\n\n• *Smart Wallet:* \`${walletAddress.slice(0, 10)}...${walletAddress.slice(-6)}\``,
       buttons: [
         { id: 'balance', title: 'Check Balance' },
         { id: 'get card', title: 'Virtual Card' },

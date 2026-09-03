@@ -54,10 +54,10 @@ export type HandlerReply =
 function getFinancialServicesMenu(): HandlerReply {
   return {
     type: 'interactive_list',
-    header: 'BMONI Financial Services',
+    header: 'ChatMonie Financial Services',
     text: 'Select a service or transaction from the menu options below:',
     buttonTitle: 'View Options',
-    footer: 'BMONI Embedded Banking Platform',
+    footer: 'ChatMonie Embedded Banking',
     sections: [
       {
         title: 'Payments & Money',
@@ -119,7 +119,7 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
       return [
         {
           type: 'interactive_buttons',
-          header: 'BMONI Banking',
+          header: 'ChatMonie Banking',
           text: `✅ Account active for *${user.firstName || 'User'}*.\n\nSelect a quick action below:`,
           buttons: [
             { id: 'balance', title: 'Check Balance' },
@@ -147,7 +147,7 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
     return [
       {
         type: 'interactive_buttons',
-        header: 'Welcome to BMONI',
+        header: 'Welcome to ChatMonie',
         text: `Bank with stablecoins directly via WhatsApp.\n\nTo verify your identity, select a test persona below or reply with your 11-digit BVN:`,
         buttons: [
           { id: '95888168924', title: 'Bunch Dillon' },
@@ -204,7 +204,7 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
       {
         type: 'interactive_buttons',
         header: 'Verification Required',
-        text: `Your BMONI account setup is incomplete.\n\nSelect a demo persona below to activate your wallet:`,
+        text: `Your ChatMonie account setup is incomplete.\n\nSelect a demo persona below to activate your wallet:`,
         buttons: [
           { id: '95888168924', title: 'Bunch Dillon' },
           { id: '22222222222', title: 'Samson Jabo' },
@@ -226,7 +226,7 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
       {
         type: 'interactive_buttons',
         header: 'Deposit & Add Funds',
-        text: `*Add Funds to BMONI Wallet*\n\nTo deposit stablecoins (CNGN, USDC, USDB), send tokens to your Base Smart Wallet address:\n\n• *Network:* Base (Layer 2)\n• *Smart Wallet Address:*\n\`${smartWalletId}\`\n\nFunds will reflect instantly in your wallet balance.`,
+        text: `*Add Funds to ChatMonie Wallet*\n\nTo deposit stablecoins (CNGN, USDC, USDB), send tokens to your Base Smart Wallet address:\n\n• *Network:* Base (Layer 2)\n• *Smart Wallet Address:*\n\`${smartWalletId}\`\n\nFunds will reflect instantly in your wallet balance.`,
         buttons: [
           { id: 'balance', title: 'Check Balance' },
           { id: 'get card', title: 'Virtual Card' },
@@ -363,7 +363,7 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
           toAddress: command.recipient,
           amount: command.amount,
           currency: 'CNGN',
-          description: command.note || 'Sent via BMONI WhatsApp',
+          description: command.note || 'Sent via ChatMonie',
         });
         proposalId = sendRes.proposal?.id || sendRes.id;
       } else {
@@ -393,7 +393,7 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
           toUserId: recipientUserId,
           amount: command.amount,
           currency: sendCurrency,
-          note: command.note || 'Sent via BMONI WhatsApp',
+          note: command.note || 'Sent via ChatMonie',
         })) as bmoni.SendResult & { proposal?: { id: string } };
 
         proposalId =

@@ -197,7 +197,7 @@ async function processWebhook(body: unknown): Promise<void> {
 // ---------------------------------------------------------------------------
 
 app.listen(PORT, () => {
-  console.log(`\n🚀 BMONI WhatsApp Bot running on port ${PORT}`);
+  console.log(`\n🚀 ChatMonie WhatsApp Bot running on port ${PORT}`);
   console.log(`   Health:  http://localhost:${PORT}/health`);
   console.log(`   Webhook: http://localhost:${PORT}/webhook`);
   console.log(`\n   ngrok tunnel: ngrok http ${PORT}\n`);
