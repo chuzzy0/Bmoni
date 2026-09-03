@@ -3,6 +3,7 @@ import express, { Request, Response } from 'express';
 import {
   extractIncomingMessage,
   sendMessage,
+  sendImage,
   sendMessages,
   markAsRead,
   sendTypingIndicator,
@@ -84,6 +85,8 @@ async function processWebhook(body: unknown): Promise<void> {
     for (const reply of replies) {
       if (typeof reply === 'string') {
         await sendMessage(phone, reply);
+      } else if (reply.type === 'image') {
+        await sendImage(phone, reply.url, reply.caption);
       } else if (reply.type === 'interactive_buttons') {
         await sendInteractiveButtons(phone, reply.text, reply.buttons, reply.header);
       } else if (reply.type === 'interactive_list') {

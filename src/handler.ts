@@ -7,6 +7,11 @@ import * as bmoni from './bmoni.js';
 export type HandlerReply =
   | string
   | {
+      type: 'image';
+      url: string;
+      caption?: string;
+    }
+  | {
       type: 'interactive_buttons';
       text: string;
       buttons: Array<{ id: string; title: string }>;
@@ -248,11 +253,20 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
         return `• *${b.currency}*: ${formatted}`;
       });
 
+      const balanceImageUrl =
+        process.env.BALANCE_IMAGE_URL ||
+        `${process.env.PUBLIC_BASE_URL || ''}/public/balance.png.jpg`;
+
       return [
+        {
+          type: 'image',
+          url: balanceImageUrl,
+          caption: `*Current Balances*\n\n${lines.join('\n')}`,
+        },
         {
           type: 'interactive_buttons',
           header: 'Wallet Balance',
-          text: `*Current Balances*\n\n${lines.join('\n')}`,
+          text: 'What would you like to do next?',
           buttons: [
             { id: 'get card', title: 'Virtual Card' },
             { id: 'history', title: 'History' },

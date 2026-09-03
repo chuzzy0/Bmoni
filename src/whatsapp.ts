@@ -165,6 +165,48 @@ export async function sendMessage(toPhone: string, text: string): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------
+// Send an image via WhatsApp Cloud API
+// ---------------------------------------------------------------------------
+
+export async function sendImage(toPhone: string, imageUrl: string, caption?: string): Promise<void> {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const token = process.env.WHATSAPP_ACCESS_TOKEN?.trim();
+
+  if (!phoneNumberId || !token) {
+    console.error('[WhatsApp] Missing WHATSAPP_PHONE_NUMBER_ID or WHATSAPP_ACCESS_TOKEN');
+    return;
+  }
+
+  const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
+  const recipient = toPhone.replace(/\D/g, '');
+
+  try {
+    await axios.post(
+      url,
+      {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: recipient,
+        type: 'image',
+        image: {
+          link: imageUrl,
+          ...(caption ? { caption } : {}),
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: unknown } };
+    console.error('[WhatsApp] Failed to send image:', JSON.stringify(axiosErr.response?.data ?? err, null, 2));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Send Interactive Quick Reply Buttons
 // ---------------------------------------------------------------------------
 
