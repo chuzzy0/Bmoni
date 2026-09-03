@@ -23,7 +23,9 @@ export default function CTA() {
           </p>
 
           <a
-            href="#"
+            href="https://wa.me/15556162147"
+            target="_blank"
+            rel="noopener noreferrer"
             className="mx-auto mt-7 inline-flex items-center gap-2 rounded-full bg-[#25d366] px-7 py-3.5 text-sm font-semibold text-white shadow-xl shadow-emerald-500/20 transition hover:-translate-y-0.5"
           >
             <MessageCircle size={15} />

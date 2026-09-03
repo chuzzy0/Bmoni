@@ -100,7 +100,9 @@ export default function HowItWorks() {
           </div>
 
           <a
-            href="#cta"
+            href="https://wa.me/15556162147"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2f0d45] px-4 py-2.5 text-[12px] font-semibold text-white"
           >
             Scan or Click to Chat

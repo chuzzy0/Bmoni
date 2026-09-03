@@ -29,13 +29,15 @@ export default function NavBar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="#cta"
+          <a
+            href="https://wa.me/15556162147"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2 text-[15px] font-semibold text-white shadow-lg shadow-violet-950/15 transition hover:-translate-y-0.5"
           >
             Start Chatting
             <ChevronRight size={13} />
-          </Link>
+          </a>
         </div>
       </div>
     </header>

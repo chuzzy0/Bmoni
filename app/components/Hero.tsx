@@ -35,7 +35,9 @@ export default function Hero() {
 
           <div className="mt-7 flex flex-wrap gap-3">
             <a
-              href="#cta"
+              href="https://wa.me/15556162147"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full bg-whatsapp px-5 py-3 text font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5"
             >
               <MessageCircle size={14} />
