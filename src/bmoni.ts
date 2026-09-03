@@ -151,6 +151,19 @@ export async function createUser(input: {
   };
 }
 
+export async function getUserProfile(userId: string): Promise<BmoniUser> {
+  const client = getClient();
+  const res = await client.get(`/v1/users/${userId}/kyc`);
+  const raw = res.data.user ?? res.data;
+  return {
+    id: raw.bmoniUserId || raw.id,
+    firstName: raw.firstName,
+    lastName: raw.lastName || '',
+    phoneNumber: raw.phoneNumber || '',
+    email: raw.email,
+  };
+}
+
 export async function getUserByPhone(phoneNumber: string): Promise<BmoniUser | null> {
   const client = getClient();
   try {

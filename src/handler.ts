@@ -499,33 +499,94 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
   // -------------------------------------------------------------------------
   if (command.type === 'issue_card') {
     try {
+      const profile = await bmoni.getUserProfile(bmoniUserId);
       const res = await bmoni.createCard(bmoniUserId, {
-        cardName: 'WhatsApp Card',
+        cardName: `${profile.firstName || 'User'}'s Virtual Card`,
         cardColor: '#00E676',
         currency: 'NGN',
         type: 'virtual',
         smartWalletId,
-        nin: '63184876213',
+        bvn: user.bvn,
       });
 
+      var username = profile.firstName || 'User'; 
+      username = username.toLowerCase();
+
       const proposalId = res.proposalId;
-      if (proposalId) {
-        try {
-          await bmoni.approveProposal(bmoniUserId, proposalId);
-          const payload = await bmoni.getProposalSignPayload(bmoniUserId, proposalId);
-          if (payload.signingPayloadHash) {
-            const privateKey = decryptPrivateKey(user.encryptedPrivateKey);
-            const signature = signProposalHash(privateKey, payload.signingPayloadHash);
-            await bmoni.signProposal(bmoniUserId, proposalId, signature);
+        if (proposalId) {
+          try {
+            await bmoni.approveProposal(bmoniUserId, proposalId);
+            const payload = await bmoni.getProposalSignPayload(bmoniUserId, proposalId);
+            if (payload.signingPayloadHash) {
+              const privateKey = decryptPrivateKey(user.encryptedPrivateKey);
+              const signature = signProposalHash(privateKey, payload.signingPayloadHash);
+              await bmoni.signProposal(bmoniUserId, proposalId, signature);
+            }
+          } catch (err) {
+            console.log('[Handler] Card proposal sign notice:', err);
           }
-        } catch (err) {
-          console.log('[Handler] Card proposal sign notice:', err);
+      }
+      const baseUrl = await getPublicBaseUrl();
+      if (username === 'samson') {
+        const cardImageUrl =
+          process.env.CARD_IMAGE_URL ||
+          (baseUrl ? `${baseUrl}/public/samCard.png` : '');
+
+        const replies: HandlerReply[] = [];
+
+        if (cardImageUrl) {
+          replies.push({
+            type: 'image',
+            url: cardImageUrl,
+            caption: `Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`,
+          });
+        } else {
+          replies.push(`Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`);
         }
+
+        replies.push({
+          type: 'interactive_buttons',
+          header: 'Wallet Balance',
+          text: 'What would you like to do next?',
+          buttons: [
+            { id: 'balance', title: 'Check Balance'  },
+            { id: 'history', title: 'History' },
+            { id: 'help', title: 'Main Menu' },
+          ],
+        });
+
+        return replies;
+      } else if (username === 'bunch') {
+        const cardImageUrl =
+          process.env.CARD_IMAGE_URL ||
+          (baseUrl ? `${baseUrl}/public/bunchCard.png` : '');
+
+        const replies: HandlerReply[] = [];
+
+        if (cardImageUrl) {
+          replies.push({
+            type: 'image',
+            url: cardImageUrl,
+            caption: `Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`,
+          });
+        } else {
+          replies.push(`Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`);
+        }
+
+        replies.push({
+          type: 'interactive_buttons',
+          header: 'Wallet Balance',
+          text: 'What would you like to do next?',
+          buttons: [
+            { id: 'balance', title: 'Check Balance'  },
+            { id: 'history', title: 'History' },
+            { id: 'help', title: 'Main Menu' },
+          ],
+        });
+
+        return replies;
       }
 
-      return [
-        `✅ *Virtual Card Created*\n\n• *Name:* WhatsApp Card\n• *Type:* Virtual Visa/Mastercard\n• *Currency:* NGN\n• *Status:* ✅ Active\n\nFunded by Base Smart Wallet. Select *my card* to manage.`,
-      ];
     } catch (err: unknown) {
       const axErr = err as { response?: { data?: { message?: string } } };
       console.error('[Handler] Issue card error:', axErr.response?.data || err);
