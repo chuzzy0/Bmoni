@@ -1,8 +1,26 @@
+import axios from 'axios';
 import { getUser, updateUser, decryptPrivateKey } from './store.js';
 import { parseCommand, HELP_TEXT } from './commands.js';
 import { runOnboarding } from './onboarding.js';
 import { signProposalHash } from './signing.js';
 import * as bmoni from './bmoni.js';
+
+async function getPublicBaseUrl(): Promise<string> {
+  if (process.env.PUBLIC_BASE_URL) {
+    return process.env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  }
+  try {
+    const res = await axios.get('http://127.0.0.1:4040/api/tunnels', { timeout: 2000 });
+    const tunnels = res.data?.tunnels as Array<{ public_url?: string }> | undefined;
+    const httpsTunnel = tunnels?.find((t) => t.public_url?.startsWith('https://'));
+    if (httpsTunnel?.public_url) {
+      return httpsTunnel.public_url.replace(/\/$/, '');
+    }
+  } catch {
+    // Ignore fallback failure
+  }
+  return '';
+}
 
 export type HandlerReply =
   | string
@@ -253,27 +271,35 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
         return `• *${b.currency}*: ${formatted}`;
       });
 
+      const baseUrl = await getPublicBaseUrl();
       const balanceImageUrl =
         process.env.BALANCE_IMAGE_URL ||
-        `${process.env.PUBLIC_BASE_URL || ''}/public/balance.png.jpg`;
+        (baseUrl ? `${baseUrl}/public/balance.png.jpg` : '');
 
-      return [
-        {
+      const replies: HandlerReply[] = [];
+
+      if (balanceImageUrl) {
+        replies.push({
           type: 'image',
           url: balanceImageUrl,
           caption: `*Current Balances*\n\n${lines.join('\n')}`,
-        },
-        {
-          type: 'interactive_buttons',
-          header: 'Wallet Balance',
-          text: 'What would you like to do next?',
-          buttons: [
-            { id: 'get card', title: 'Virtual Card' },
-            { id: 'history', title: 'History' },
-            { id: 'help', title: 'View Options' },
-          ],
-        },
-      ];
+        });
+      } else {
+        replies.push(`*Current Balances*\n\n${lines.join('\n')}`);
+      }
+
+      replies.push({
+        type: 'interactive_buttons',
+        header: 'Wallet Balance',
+        text: 'What would you like to do next?',
+        buttons: [
+          { id: 'get card', title: 'Virtual Card' },
+          { id: 'history', title: 'History' },
+          { id: 'help', title: 'Main Menu' },
+        ],
+      });
+
+      return replies;
     } catch (err) {
       console.error('[Handler] Balance error:', err);
       return [`❌ [Error] Unable to retrieve account balances.`];
