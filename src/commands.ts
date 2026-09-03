@@ -123,7 +123,7 @@ export function parseCommand(text: string): Command | null {
 // Help text (Clean corporate typography)
 // ---------------------------------------------------------------------------
 
-export const HELP_TEXT = `*BMONI Embedded Banking*
+export const HELP_TEXT = `*ChatMonie Embedded Banking*
 
 Available Instructions:
 
@@ -139,4 +139,4 @@ Available Instructions:
 • *rate USD NGN* — Check live exchange rate
 • *help* — Open financial services menu
 
-_Powered by BMONI Embedded_`;
+_Powered by ChatMonie Embedded_`;
