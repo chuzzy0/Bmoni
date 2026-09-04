@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   LockKeyhole,
@@ -27,13 +30,47 @@ function MoreIcon() {
   );
 }
 
-export default function PhoneMockup() {
+function TypingDots() {
   return (
-    <div className="relative mx-auto w-72.5 sm:w-[320px]">
-      <div className="absolute -inset-5 rounded-[3rem] bg-violet-500/15 blur-3xl" />
+    <span className="inline-flex items-center gap-0.5">
+      <span
+        className="h-1 w-1 rounded-full bg-slate-400"
+        style={{ animation: "typing-dot 1.2s ease-in-out infinite", animationDelay: "0ms" }}
+      />
+      <span
+        className="h-1 w-1 rounded-full bg-slate-400"
+        style={{ animation: "typing-dot 1.2s ease-in-out infinite", animationDelay: "150ms" }}
+      />
+      <span
+        className="h-1 w-1 rounded-full bg-slate-400"
+        style={{ animation: "typing-dot 1.2s ease-in-out infinite", animationDelay: "300ms" }}
+      />
+    </span>
+  );
+}
+
+// step index at which each message becomes visible
+const STEP_COUNT = 6;
+
+export default function PhoneMockup() {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    if (step >= STEP_COUNT) return;
+    const t = setTimeout(() => setStep((s) => s + 1), step === 0 ? 500 : 650);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  const show = (n: number) => step >= n;
+  const typing = (n: number) => step === n - 1;
+
+  return (
+    <div className="animate-bob relative mx-auto w-72.5 sm:w-[320px]">
+      <div className="absolute -inset-5 animate-drift-a rounded-[3rem] bg-violet-500/15 blur-3xl" />
 
       <div className="relative rounded-[2.5rem] border-[7px] border-[#2b113a] bg-[#110c16] p-1 shadow-[0_30px_70px_rgba(38,12,58,0.35)]">
-        <div className="overflow-hidden rounded-4xl bg-white">
+        <div className="relative overflow-hidden rounded-4xl bg-white">
+          <div className="scan-line pointer-events-none z-20" />
           <div className="flex items-center justify-between bg-[#4f1a63] px-4 py-3 text-white">
             <div className="flex items-center gap-2">
               <div className="grid h-8 w-8 place-items-center rounded-full bg-white text-violet-700">
@@ -55,63 +92,85 @@ export default function PhoneMockup() {
             </div>
           </div>
 
-          <div className="space-y-3 bg-[#f5f3f6] p-3 text-[8px] text-slate-700">
+          <div className="min-h-[420px] space-y-3 bg-[#f5f3f6] p-3 text-[8px] text-slate-700">
             <div className="text-center text-[7px] text-slate-400">TODAY</div>
 
-            <div className="ml-auto max-w-[76%] rounded-xl rounded-tr-sm bg-[#ddf8ce] px-3 py-2">
-              Send ₦5,000.00 to John Doe
-              <div className="mt-1 text-right text-[6px] text-slate-400">
-                10:24 AM ✓✓
-              </div>
-            </div>
-
-            <div className="rounded-xl rounded-tl-sm bg-white px-3 py-2 shadow-sm">
-              <p className="font-semibold text-slate-900">TRANSACTION REVIEW</p>
-
-              <p className="mt-1 leading-3">
-                Confirm transfer of ₦5,000 to John Okafor (0812 442 1992)
-              </p>
-
-              <div className="mt-2 inline-flex rounded-full bg-violet-100 px-2 py-1 text-[6px] text-violet-700">
-                Fee: ₦0.00 • ₦5,000 Rails
-              </div>
-            </div>
-
-            <div className="ml-auto max-w-[50%] rounded-xl rounded-tr-sm bg-[#ddf8ce] px-3 py-2 text-center">
-              Yes, confirm
-            </div>
-
-            <div className="rounded-xl bg-white px-3 py-2 shadow-sm">
-              <div className="flex items-center gap-1 font-semibold text-slate-900">
-                <CheckCircle2 size={9} className="text-emerald-500" />
-                Transfer Successful
-              </div>
-
-              <div className="mt-2 space-y-1 text-[7px]">
-                <div className="flex justify-between">
-                  <span>Sender</span>
-                  <span>John Okafor</span>
-                </div>
-
-                <div className="flex justify-between font-semibold">
-                  <span>Amount</span>
-                  <span>₦5,000.00</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>New Balance</span>
-                  <span>₦128,450.00</span>
+            {show(1) && (
+              <div className="animate-bubble-in ml-auto max-w-[76%] rounded-xl rounded-tr-sm bg-[#ddf8ce] px-3 py-2">
+                Send ₦5,000.00 to John Doe
+                <div className="mt-1 text-right text-[6px] text-slate-400">
+                  10:24 AM ✓✓
                 </div>
               </div>
+            )}
 
-              <div className="mt-2 rounded-md bg-slate-50 px-2 py-1 text-[6px] text-slate-400">
-                Ref: CHM-89241
+            {typing(2) && (
+              <div className="animate-bubble-in inline-flex rounded-xl rounded-tl-sm bg-white px-3 py-2.5 shadow-sm">
+                <TypingDots />
               </div>
-            </div>
+            )}
 
-            <div className="rounded-xl bg-white px-3 py-2 text-[7px] shadow-sm">
-              Your secure banking command has been completed.
-            </div>
+            {show(2) && (
+              <div className="animate-bubble-in rounded-xl rounded-tl-sm bg-white px-3 py-2 shadow-sm">
+                <p className="font-semibold text-slate-900">TRANSACTION REVIEW</p>
+
+                <p className="mt-1 leading-3">
+                  Confirm transfer of ₦5,000 to John Okafor (0812 442 1992)
+                </p>
+
+                <div className="mt-2 inline-flex rounded-full bg-violet-100 px-2 py-1 text-[6px] text-violet-700">
+                  Fee: ₦0.00 • ₦5,000 Rails
+                </div>
+              </div>
+            )}
+
+            {show(3) && (
+              <div className="animate-bubble-in ml-auto max-w-[50%] rounded-xl rounded-tr-sm bg-[#ddf8ce] px-3 py-2 text-center">
+                Yes, confirm
+              </div>
+            )}
+
+            {typing(4) && (
+              <div className="animate-bubble-in inline-flex rounded-xl bg-white px-3 py-2.5 shadow-sm">
+                <TypingDots />
+              </div>
+            )}
+
+            {show(4) && (
+              <div className="animate-bubble-in rounded-xl bg-white px-3 py-2 shadow-sm">
+                <div className="flex items-center gap-1 font-semibold text-slate-900">
+                  <CheckCircle2 size={9} className="text-emerald-500" />
+                  Transfer Successful
+                </div>
+
+                <div className="mt-2 space-y-1 text-[7px]">
+                  <div className="flex justify-between">
+                    <span>Sender</span>
+                    <span>John Okafor</span>
+                  </div>
+
+                  <div className="flex justify-between font-semibold">
+                    <span>Amount</span>
+                    <span>₦5,000.00</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span>New Balance</span>
+                    <span>₦128,450.00</span>
+                  </div>
+                </div>
+
+                <div className="mt-2 rounded-md bg-slate-50 px-2 py-1 text-[6px] text-slate-400">
+                  Ref: CHM-89241
+                </div>
+              </div>
+            )}
+
+            {show(5) && (
+              <div className="animate-bubble-in rounded-xl bg-white px-3 py-2 text-[7px] shadow-sm">
+                Your secure banking command has been completed.
+              </div>
+            )}
 
             <div className="flex items-center justify-between rounded-full border border-slate-200 bg-white px-3 py-2 text-[7px] text-slate-400">
               <span>Type a banking command...</span>

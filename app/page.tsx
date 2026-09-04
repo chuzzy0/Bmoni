@@ -5,10 +5,12 @@ import HowItWorks from "./components/HowItWorks";
 import Security from "./components/Security";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
+import AmbientBackground from "./components/AmbientBackground";
 
 export default function Page() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fbfbff] text-slate-950">
+    <main className="relative min-h-screen overflow-hidden bg-transparent text-slate-950 pt-24">
+      <AmbientBackground />
       <NavBar />
       <Hero />
       <Features />
