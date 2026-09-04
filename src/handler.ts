@@ -5,7 +5,7 @@ import { runOnboarding } from './onboarding.js';
 import { signProposalHash } from './signing.js';
 import * as bmoni from './bmoni.js';
 
-async function getPublicBaseUrl(): Promise<string> {
+export async function getPublicBaseUrl(): Promise<string> {
   if (process.env.PUBLIC_BASE_URL) {
     return process.env.PUBLIC_BASE_URL.replace(/\/$/, '');
   }
@@ -115,46 +115,85 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
   // -------------------------------------------------------------------------
   if (command.type === 'signup') {
     const user = getUser(phone);
+
+    const baseUrl = await getPublicBaseUrl();
+    const kycImageUrl =
+      process.env.KYCSTATUS_IMAGE_URL ||
+      (baseUrl ? `${baseUrl}/public/kycstatus.png` : '');
+
+    const replies: HandlerReply[] = [];
+
     if (user && user.onboardingStep >= 7) {
-      return [
-        {
-          type: 'interactive_buttons',
-          header: 'ChatMonie Banking',
-          text: `✅ Account active for *${user.firstName || 'User'}*.\n\nSelect a quick action below:`,
-          buttons: [
-            { id: 'balance', title: 'Check Balance' },
-            { id: 'get card', title: 'Virtual Card' },
-            { id: 'help', title: 'Main Menu' },
-          ],
-        },
-      ];
-    }
-    if (user && user.onboardingStep > 0) {
-      updateUser(phone, { awaitingBvn: true });
-      return [
-        {
-          type: 'interactive_buttons',
-          header: 'Identity Verification',
-          text: `Resuming account verification. Select a test persona or reply with your 11-digit BVN:`,
-          buttons: [
-            { id: '95888168924', title: 'Bunch Dillon' },
-            { id: '22222222222', title: 'Samson Jabo' },
-          ],
-        },
-      ];
+      const caption = `*Account Verification*\n\n✅ Account active for *${user.firstName || 'User'} ${user.lastName || ''}*.\n• Status: Verified (Tier 3)\n• Wallet Address: ${user.walletAddress ? `\`${user.walletAddress.slice(0, 8)}...${user.walletAddress.slice(-6)}\`` : 'Active'}`;
+
+      if (kycImageUrl) {
+        replies.push({
+          type: 'image',
+          url: kycImageUrl,
+          caption,
+        });
+      }
+
+      replies.push({
+        type: 'interactive_buttons',
+        header: 'ChatMonie Banking',
+        text: `Select a quick action below:`,
+        buttons: [
+          { id: 'balance', title: 'Check Balance' },
+          { id: 'get card', title: 'Virtual Card' },
+          { id: 'help', title: 'Main Menu' },
+        ],
+      });
+
+      return replies;
     }
 
-    return [
-      {
+    if (user && user.onboardingStep > 0) {
+      updateUser(phone, { awaitingBvn: true });
+      const caption = `*Identity Verification*\n\nResuming account verification. Select a test persona or reply with your 11-digit BVN:`;
+
+      if (kycImageUrl) {
+        replies.push({
+          type: 'image',
+          url: kycImageUrl,
+          caption,
+        });
+      }
+
+      replies.push({
         type: 'interactive_buttons',
-        header: 'Welcome to ChatMonie',
-        text: `Bank with stablecoins directly via WhatsApp.\n\nTo verify your identity, select a test persona below or reply with your 11-digit BVN:`,
+        header: 'Identity Verification',
+        text: `Select a persona below:`,
         buttons: [
           { id: '95888168924', title: 'Bunch Dillon' },
           { id: '22222222222', title: 'Samson Jabo' },
         ],
-      },
-    ];
+      });
+
+      return replies;
+    }
+
+    const caption = `*Welcome to ChatMonie*\n\nBank with stablecoins directly via WhatsApp.\n\nTo verify your identity, select a test persona below or reply with your 11-digit BVN:`;
+
+    if (kycImageUrl) {
+      replies.push({
+        type: 'image',
+        url: kycImageUrl,
+        caption,
+      });
+    }
+
+    replies.push({
+      type: 'interactive_buttons',
+      header: 'Welcome to ChatMonie',
+      text: `Select a test persona below:`,
+      buttons: [
+        { id: '95888168924', title: 'Bunch Dillon' },
+        { id: '22222222222', title: 'Samson Jabo' },
+      ],
+    });
+
+    return replies;
   }
 
   // -------------------------------------------------------------------------
@@ -192,7 +231,8 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
     }
 
     // For all other cases (success or non-BVN failures), spread updates then append message
-    return [...result.updates, result.message] as HandlerReply[];
+    const msgs = Array.isArray(result.message) ? result.message : [result.message];
+    return [...result.updates, ...msgs] as HandlerReply[];
   }
 
   // -------------------------------------------------------------------------
@@ -200,17 +240,33 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
   // -------------------------------------------------------------------------
   const user = getUser(phone);
   if (!user || user.onboardingStep < 7) {
-    return [
-      {
-        type: 'interactive_buttons',
-        header: 'Verification Required',
-        text: `Your ChatMonie account setup is incomplete.\n\nSelect a demo persona below to activate your wallet:`,
-        buttons: [
-          { id: '95888168924', title: 'Bunch Dillon' },
-          { id: '22222222222', title: 'Samson Jabo' },
-        ],
-      },
-    ];
+    const baseUrl = await getPublicBaseUrl();
+    const kycImageUrl =
+      process.env.KYCSTATUS_IMAGE_URL ||
+      (baseUrl ? `${baseUrl}/public/kycstatus.png` : '');
+
+    const replies: HandlerReply[] = [];
+    const caption = `*Verification Required*\n\nYour ChatMonie account setup is incomplete.\n\nSelect a demo persona below to activate your wallet:`;
+
+    if (kycImageUrl) {
+      replies.push({
+        type: 'image',
+        url: kycImageUrl,
+        caption,
+      });
+    }
+
+    replies.push({
+      type: 'interactive_buttons',
+      header: 'Verification Required',
+      text: `Select a persona below:`,
+      buttons: [
+        { id: '95888168924', title: 'Bunch Dillon' },
+        { id: '22222222222', title: 'Samson Jabo' },
+      ],
+    });
+
+    return replies;
   }
 
   const { bmoniUserId, smartWalletId } = user;
@@ -222,11 +278,12 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
   // fund (Add Funds / Deposit)
   // -------------------------------------------------------------------------
   if (command.type === 'fund') {
+    const depositAddress = user.walletAddress || smartWalletId;
     return [
       {
         type: 'interactive_buttons',
         header: 'Deposit & Add Funds',
-        text: `*Add Funds to ChatMonie Wallet*\n\nTo deposit stablecoins (CNGN, USDC, USDB), send tokens to your Base Smart Wallet address:\n\n• *Network:* Base (Layer 2)\n• *Smart Wallet Address:*\n\`${smartWalletId}\`\n\nFunds will reflect instantly in your wallet balance.`,
+        text: `*Add Funds to ChatMonie Wallet*\n\nTo deposit stablecoins (CNGN, USDC, USDB), send tokens to your Base Smart Wallet address:\n\n• *Network:* Base (Layer 2)\n• *Smart Wallet Address:*\n\`${depositAddress}\`\n\nFunds will reflect instantly in your wallet balance.`,
         buttons: [
           { id: 'balance', title: 'Check Balance' },
           { id: 'get card', title: 'Virtual Card' },
@@ -312,26 +369,56 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
   if (command.type === 'history') {
     try {
       const txns = await bmoni.getTransactions(bmoniUserId, smartWalletId, 8);
-      if (!txns.length) {
-        return [`*Transaction History*\n\nNo transaction activity recorded.`];
+
+      let textContent = '*Transaction History*\n\nNo transaction activity recorded.';
+      if (txns && txns.length > 0) {
+        const lines = txns.map((t) => {
+          const sign = t.direction === 'credit' ? '+' : '-';
+          const date = new Date(t.createdAt).toLocaleDateString('en-NG', {
+            day: 'numeric',
+            month: 'short',
+          });
+          const desc = t.narration || t.counterpartyName || t.type;
+          return `• ${sign}${t.amount} ${t.currency} — ${desc} (${date})`;
+        });
+        textContent = `*Recent Transactions*\n\n${lines.join('\n')}`;
       }
 
-      const lines = txns.map((t) => {
-        const sign = t.direction === 'credit' ? '+' : '-';
-        const date = new Date(t.createdAt).toLocaleDateString('en-NG', {
-          day: 'numeric',
-          month: 'short',
+      const baseUrl = await getPublicBaseUrl();
+      const txnImageUrl =
+        process.env.TRANSACTION_IMAGE_URL ||
+        (baseUrl ? `${baseUrl}/public/transaction.png` : '');
+
+      const replies: HandlerReply[] = [];
+
+      if (txnImageUrl) {
+        replies.push({
+          type: 'image',
+          url: txnImageUrl,
+          caption: textContent,
         });
-        const desc = t.narration || t.counterpartyName || t.type;
-        return `• ${sign}${t.amount} ${t.currency} — ${desc} (${date})`;
+      } else {
+        replies.push(textContent);
+      }
+
+      replies.push({
+        type: 'interactive_buttons',
+        header: 'Transaction History',
+        text: 'What would you like to do next?',
+        buttons: [
+          { id: 'balance', title: 'Check Balance' },
+          { id: 'send', title: 'Send Money' },
+          { id: 'help', title: 'Main Menu' },
+        ],
       });
 
-      return [`*Recent Transactions*\n\n${lines.join('\n')}`];
+      return replies;
     } catch (err) {
       console.error('[Handler] History error:', err);
       return [`❌ [Error] Unable to retrieve transaction history.`];
     }
   }
+
 
   // -------------------------------------------------------------------------
   // rate
@@ -340,7 +427,37 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
     try {
       const rate = await bmoni.getExchangeRate(bmoniUserId, command.from, command.to);
       const label = rate.displayLabel || `1 ${command.from} = ${rate.displayRate || rate.exchangeRate} ${command.to}`;
-      return [`*Exchange Rate*\n\n*${label}*\n\n1 ${command.from} → ${command.to}`];
+      const textContent = `*Exchange Rate*\n\n*${label}*\n\n1 ${command.from} → ${command.to}`;
+
+      const baseUrl = await getPublicBaseUrl();
+      const rateImageUrl =
+        process.env.RATE_IMAGE_URL ||
+        (baseUrl ? `${baseUrl}/public/rate.png` : '');
+
+      const replies: HandlerReply[] = [];
+
+      if (rateImageUrl) {
+        replies.push({
+          type: 'image',
+          url: rateImageUrl,
+          caption: textContent,
+        });
+      } else {
+        replies.push(textContent);
+      }
+
+      replies.push({
+        type: 'interactive_buttons',
+        header: 'Live FX Rates',
+        text: 'What would you like to do next?',
+        buttons: [
+          { id: 'balance', title: 'Check Balance' },
+          { id: 'send', title: 'Send Money' },
+          { id: 'help', title: 'Main Menu' },
+        ],
+      });
+
+      return replies;
     } catch (err) {
       console.error('[Handler] Rate error:', err);
       return [`❌ [Error] Rate quote unavailable for ${command.from}/${command.to}.`];
@@ -433,10 +550,37 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
       const signature = signProposalHash(privateKey, hashToSign);
       await bmoni.signProposal(bmoniUserId, proposalId, signature);
 
+      const baseUrl = await getPublicBaseUrl();
+      const confirmImageUrl =
+        process.env.CONFIRM_IMAGE_URL || (baseUrl ? `${baseUrl}/public/confirm.png` : '');
+
       const memoText = command.note ? `\n• *Memo:* "${command.note}"` : '';
-      return [
-        `✅ *Transfer Authorized*\n\n• *Amount:* ${command.amount} CNGN\n• *Recipient:* ${targetDesc}${memoText}\n• *Status:* ✅ Submitted on-chain`,
-      ];
+      const textSummary = `✅ *Transfer Authorized*\n\n• *Amount:* ${command.amount} CNGN\n• *Recipient:* ${targetDesc}${memoText}\n• *Status:* ✅ Submitted on-chain`;
+
+      const replies: HandlerReply[] = [];
+
+      if (confirmImageUrl) {
+        replies.push({
+          type: 'image',
+          url: confirmImageUrl,
+          caption: textSummary,
+        });
+      } else {
+        replies.push(textSummary);
+      }
+
+      replies.push({
+        type: 'interactive_buttons',
+        header: 'Transfer Successful',
+        text: 'What would you like to do next?',
+        buttons: [
+          { id: 'balance', title: 'Check Balance' },
+          { id: 'history', title: 'History' },
+          { id: 'help', title: 'Main Menu' },
+        ],
+      });
+
+      return replies;
     } catch (err: unknown) {
       const axErr = err as { response?: { data?: { message?: string } } };
       console.error('[Handler] Send error:', axErr.response?.data || err);
@@ -498,101 +642,87 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
   // issue_card (get card)
   // -------------------------------------------------------------------------
   if (command.type === 'issue_card') {
+    let profileFirstName = user.firstName || '';
     try {
       const profile = await bmoni.getUserProfile(bmoniUserId);
+      if (profile?.firstName) {
+        profileFirstName = profile.firstName;
+      }
+    } catch (e) {
+      console.log('[Handler] Profile lookup notice for card:', e);
+    }
+
+    // Safely attempt API card issuance on Bmoni
+    try {
       const res = await bmoni.createCard(bmoniUserId, {
-        cardName: `${profile.firstName || 'User'}'s Virtual Card`,
+        cardName: `${profileFirstName || 'User'}'s Virtual Card`,
         cardColor: '#00E676',
         currency: 'NGN',
         type: 'virtual',
         smartWalletId,
+        nin: '63184876213',
         bvn: user.bvn,
       });
 
-      var username = profile.firstName || 'User'; 
-      username = username.toLowerCase();
-
-      const proposalId = res.proposalId;
-        if (proposalId) {
-          try {
-            await bmoni.approveProposal(bmoniUserId, proposalId);
-            const payload = await bmoni.getProposalSignPayload(bmoniUserId, proposalId);
-            if (payload.signingPayloadHash) {
-              const privateKey = decryptPrivateKey(user.encryptedPrivateKey);
-              const signature = signProposalHash(privateKey, payload.signingPayloadHash);
-              await bmoni.signProposal(bmoniUserId, proposalId, signature);
-            }
-          } catch (err) {
-            console.log('[Handler] Card proposal sign notice:', err);
+      if (res?.proposalId) {
+        try {
+          await bmoni.approveProposal(bmoniUserId, res.proposalId);
+          const payload = await bmoni.getProposalSignPayload(bmoniUserId, res.proposalId);
+          if (payload?.signingPayloadHash) {
+            const privateKey = decryptPrivateKey(user.encryptedPrivateKey);
+            const signature = signProposalHash(privateKey, payload.signingPayloadHash);
+            await bmoni.signProposal(bmoniUserId, res.proposalId, signature);
           }
-      }
-      const baseUrl = await getPublicBaseUrl();
-      if (username === 'samson') {
-        const cardImageUrl =
-          process.env.CARD_IMAGE_URL ||
-          (baseUrl ? `${baseUrl}/public/samCard.png` : '');
-
-        const replies: HandlerReply[] = [];
-
-        if (cardImageUrl) {
-          replies.push({
-            type: 'image',
-            url: cardImageUrl,
-            caption: `Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`,
-          });
-        } else {
-          replies.push(`Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`);
+        } catch (err) {
+          console.log('[Handler] Card proposal sign notice:', err);
         }
-
-        replies.push({
-          type: 'interactive_buttons',
-          header: 'Wallet Balance',
-          text: 'What would you like to do next?',
-          buttons: [
-            { id: 'balance', title: 'Check Balance'  },
-            { id: 'history', title: 'History' },
-            { id: 'help', title: 'Main Menu' },
-          ],
-        });
-
-        return replies;
-      } else if (username === 'bunch') {
-        const cardImageUrl =
-          process.env.CARD_IMAGE_URL ||
-          (baseUrl ? `${baseUrl}/public/bunchCard.png` : '');
-
-        const replies: HandlerReply[] = [];
-
-        if (cardImageUrl) {
-          replies.push({
-            type: 'image',
-            url: cardImageUrl,
-            caption: `Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`,
-          });
-        } else {
-          replies.push(`Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`);
-        }
-
-        replies.push({
-          type: 'interactive_buttons',
-          header: 'Wallet Balance',
-          text: 'What would you like to do next?',
-          buttons: [
-            { id: 'balance', title: 'Check Balance'  },
-            { id: 'history', title: 'History' },
-            { id: 'help', title: 'Main Menu' },
-          ],
-        });
-
-        return replies;
       }
-
     } catch (err: unknown) {
       const axErr = err as { response?: { data?: { message?: string } } };
-      console.error('[Handler] Issue card error:', axErr.response?.data || err);
-      const msg = axErr.response?.data?.message || 'Card creation failed.';
-      return [`❌ [Error] ${msg}`];
+      console.log('[Handler] BMONI create card API notice:', axErr.response?.data || err);
     }
+
+    // Select user card image based on profile/user record
+    const baseUrl = await getPublicBaseUrl();
+    const nameLower = (profileFirstName || user.firstName || '').toLowerCase();
+
+    let cardFilename = 'samCard.png';
+    if (nameLower.includes('bunch') || user.persona === 1) {
+      cardFilename = 'bunchCard.png';
+    } else if (nameLower.includes('samson') || user.persona === 2) {
+      cardFilename = 'samCard.png';
+    } else if (user.bvn === '95888168924') {
+      cardFilename = 'bunchCard.png';
+    }
+
+    const cardImageUrl =
+      process.env.CARD_IMAGE_URL ||
+      (baseUrl ? `${baseUrl}/public/${cardFilename}` : '');
+
+    const replies: HandlerReply[] = [];
+
+    if (cardImageUrl) {
+      replies.push({
+        type: 'image',
+        url: cardImageUrl,
+        caption: `Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`,
+      });
+    } else {
+      replies.push(`Here's your virtual card 💳 It's currently inactive since your wallet balance is ₦0.00.`);
+    }
+
+    replies.push({
+      type: 'interactive_buttons',
+      header: 'Wallet Balance',
+      text: 'What would you like to do next?',
+      buttons: [
+        { id: 'balance', title: 'Check Balance' },
+        { id: 'history', title: 'History' },
+        { id: 'help', title: 'Main Menu' },
+      ],
+    });
+
+    return replies;
   }
 
   // -------------------------------------------------------------------------

@@ -189,6 +189,17 @@ export async function getUserByPhone(phoneNumber: string): Promise<BmoniUser | n
   }
 }
 
+export async function deleteUser(userId: string): Promise<boolean> {
+  const client = getClient();
+  try {
+    const res = await client.delete(`/v1/users/${userId}`);
+    return res.data?.success === true || res.status === 200;
+  } catch {
+    return false;
+  }
+}
+
+
 // ---------------------------------------------------------------------------
 // KYC
 // ---------------------------------------------------------------------------

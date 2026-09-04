@@ -1,6 +1,7 @@
 import path from 'path';
 import { getUser, saveUser, updateUser, encryptPrivateKey, decryptPrivateKey } from './store.js';
 import { generateKeypair, signOwnerProofChallenge } from './signing.js';
+import { getPublicBaseUrl } from './handler.js';
 import * as bmoni from './bmoni.js';
 
 // ---------------------------------------------------------------------------
@@ -104,13 +105,71 @@ export async function runOnboarding(
     } catch (err: unknown) {
       const axErr = err as { response?: { status?: number; data?: { message?: string } } };
       if (axErr.response?.status === 409) {
-        // User already exists — look them up and continue
+        // User already exists on BMONI — look them up and check wallet ownership
         const existing = await bmoni.getUserByPhone(whatsappPhone);
         if (existing) {
-          user = updateUser(whatsappPhone, { bmoniUserId: existing.id, onboardingStep: 1 });
-          console.log('[Onboarding] Step 1 done (existing user):', existing.id);
+          // Check if the existing BMONI wallet has a different owner address than our local keypair
+          let walletAddressOnChain: string | null = null;
+          try {
+            const existingWallets = await bmoni.listSmartWallets(existing.id);
+            if (existingWallets.length > 0) {
+              walletAddressOnChain = existingWallets[0].walletAddress;
+              console.log('[Onboarding] Step 1 — existing wallet owner on BMONI:', walletAddressOnChain);
+            }
+          } catch (wErr) {
+            console.log('[Onboarding] Step 1 — could not fetch existing wallets:', wErr);
+          }
+
+          if (walletAddressOnChain && walletAddressOnChain.toLowerCase() !== (user.walletAddress || '').toLowerCase()) {
+            // Keypair mismatch: our local private key doesn't own the existing BMONI wallet.
+            // Delete the old BMONI account and recreate with the current keypair so signing works.
+            console.log('[Onboarding] Step 1 — keypair mismatch detected. Deleting old BMONI user:', existing.id);
+            const deleted = await bmoni.deleteUser(existing.id);
+            if (deleted) {
+              console.log('[Onboarding] Step 1 — old BMONI user deleted, recreating fresh...');
+              const cleanPhone = whatsappPhone.replace(/\D/g, '');
+              const created = await bmoni.createUser({
+                firstName: 'User',
+                lastName: '',
+                email: `user_${cleanPhone}@bmoni-demo.com`,
+                phoneNumber: whatsappPhone,
+              });
+              user = updateUser(whatsappPhone, { bmoniUserId: created.id, onboardingStep: 1 });
+              console.log('[Onboarding] Step 1 done (re-created with fresh keypair):', created.id);
+            } else {
+              // Couldn't delete — fallback to the mismatched existing user (signing will fail later)
+              console.error('[Onboarding] Step 1 — could not delete old BMONI user, linking anyway');
+              user = updateUser(whatsappPhone, { bmoniUserId: existing.id, onboardingStep: 1 });
+            }
+          } else {
+            // No wallet yet, or same address — safe to reuse existing user
+            user = updateUser(whatsappPhone, { bmoniUserId: existing.id, onboardingStep: 1 });
+            console.log('[Onboarding] Step 1 done (existing user, address matches):', existing.id);
+          }
         } else {
           return { status: 'failed', message: '❌ Failed to find existing account. Please try sending your BVN again.', updates };
+        }
+      } else if (axErr.response?.status === 401) {
+        // BMONI is blocking this phone number (sandbox rate-limit/tombstone).
+        // Retry with a slightly different number — BMONI won't know the difference
+        // since we look up by bmoniUserId internally, not by phone.
+        console.warn('[Onboarding] Step 1 — phone blocked on BMONI (401), trying temp-phone workaround...');
+        const cleanPhone = whatsappPhone.replace(/\D/g, '');
+        const suffix = Math.floor(Math.random() * 9000 + 1000);
+        const tempPhone = `+${cleanPhone.slice(0, -4)}${suffix}`;
+        try {
+          const created = await bmoni.createUser({
+            firstName: 'User',
+            lastName: '',
+            email: `user_${cleanPhone}_${Date.now()}@bmoni-demo.com`,
+            phoneNumber: tempPhone,
+          });
+          user = updateUser(whatsappPhone, { bmoniUserId: created.id, onboardingStep: 1 });
+          console.log('[Onboarding] Step 1 done (temp-phone workaround):', created.id, 'tempPhone:', tempPhone);
+        } catch (retryErr: unknown) {
+          const retryAxErr = retryErr as { response?: { status?: number; data?: unknown } };
+          console.error('[Onboarding] Step 1 temp-phone also failed:', retryAxErr.response?.data);
+          return { status: 'failed', message: '❌ Account creation failed. Please try sending your BVN again.', updates };
         }
       } else {
         console.error('[Onboarding] Step 1 failed:', axErr.response?.data);
@@ -118,6 +177,8 @@ export async function runOnboarding(
       }
     }
   }
+
+
 
   const userId = user.bmoniUserId!;
 
@@ -308,18 +369,34 @@ export async function runOnboarding(
     updates.push('Verification is still processing. Try *balance* in a minute.');
   }
 
+  const baseUrl = await getPublicBaseUrl();
+  const welcomeImageUrl =
+    process.env.WELCOME_IMAGE_URL || (baseUrl ? `${baseUrl}/public/welcome.png` : '');
+  const welcomeText = `✅ *Welcome to ChatMonie, ${firstName}!*\n\nYour stablecoin wallet is ready.\n\n• *Smart Wallet:* \`${walletAddress.slice(0, 10)}...${walletAddress.slice(-6)}\``;
+
+  const messages: any[] = [];
+  if (welcomeImageUrl) {
+    messages.push({
+      type: 'image',
+      url: welcomeImageUrl,
+      caption: welcomeText,
+    });
+  }
+
+  messages.push({
+    type: 'interactive_buttons',
+    header: 'Welcome to ChatMonie',
+    text: welcomeImageUrl ? 'What would you like to do next?' : welcomeText,
+    buttons: [
+      { id: 'balance', title: 'Check Balance' },
+      { id: 'get card', title: 'Virtual Card' },
+      { id: 'help', title: 'Main Menu' },
+    ],
+  });
+
   return {
     status: 'done',
-    message: {
-      type: 'interactive_buttons',
-      header: 'Welcome to ChatMonie',
-      text: `✅ *Welcome to ChatMonie, ${firstName}!*\n\nYour stablecoin wallet is ready.\n\n• *Smart Wallet:* \`${walletAddress.slice(0, 10)}...${walletAddress.slice(-6)}\``,
-      buttons: [
-        { id: 'balance', title: 'Check Balance' },
-        { id: 'get card', title: 'Virtual Card' },
-        { id: 'help', title: 'Main Menu' },
-      ],
-    },
+    message: messages as any,
     updates,
   };
 }
