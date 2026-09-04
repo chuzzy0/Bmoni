@@ -331,7 +331,7 @@ export async function handleMessage(phone: string, text: string): Promise<Handle
       const baseUrl = await getPublicBaseUrl();
       const balanceImageUrl =
         process.env.BALANCE_IMAGE_URL ||
-        (baseUrl ? `${baseUrl}/public/balance.png.jpg` : '');
+        (baseUrl ? `${baseUrl}/public/balance.png` : '');
 
       const replies: HandlerReply[] = [];
 
